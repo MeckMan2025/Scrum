@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { Plus, Download, Upload } from 'lucide-react'
 import { loadTasksFromCSV, downloadCSV } from './utils/csvUtils'
 import TaskModal from './components/TaskModal'
 import TaskCard from './components/TaskCard'
 import Sidebar from './components/Sidebar'
+import LoadingScreen from './components/LoadingScreen'
 
 const COLUMNS = [
   { id: 'todo', title: 'To Do', color: 'bg-pastel-blue' },
@@ -19,6 +20,7 @@ const DEFAULT_TABS = [
 ]
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true)
   const [tabs, setTabs] = useState(() => {
     const saved = localStorage.getItem('scrum-tabs')
     return saved ? JSON.parse(saved) : DEFAULT_TABS
@@ -161,7 +163,13 @@ function App() {
 
   const currentTabName = tabs.find(t => t.id === activeTab)?.name || 'Board'
 
+  const handleLoadingComplete = useCallback(() => {
+    setIsLoading(false)
+  }, [])
+
   return (
+    <>
+      {isLoading && <LoadingScreen onComplete={handleLoadingComplete} />}
     <div className="min-h-screen bg-gradient-to-br from-pastel-blue/30 via-pastel-pink/20 to-pastel-orange/30 flex">
       {/* Sidebar */}
       <Sidebar
@@ -284,6 +292,7 @@ function App() {
         />
       )}
     </div>
+    </>
   )
 }
 
