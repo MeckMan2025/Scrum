@@ -1,38 +1,74 @@
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Plus, X, Trash2 } from 'lucide-react'
+import { supabase } from '../supabase'
 import { useUser } from '../contexts/UserContext'
-
-const STORAGE_KEY = 'scrum-calendar-events'
-
-function loadEvents() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}
-  } catch {
-    return {}
-  }
-}
-
-function saveEvents(events) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(events))
-}
 
 function CalendarView() {
   const { username, isLead } = useUser()
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [events, setEvents] = useState(loadEvents)
+  const [events, setEvents] = useState({})
   const [selectedDay, setSelectedDay] = useState(null)
   const [eventName, setEventName] = useState('')
   const [eventDesc, setEventDesc] = useState('')
 
-  // Sync across tabs
+  // Load events from Supabase on mount
   useEffect(() => {
-    const handleStorage = (e) => {
-      if (e.key === STORAGE_KEY) {
-        setEvents(loadEvents())
+    async function load() {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .order('created_at', { ascending: true })
+      if (error) {
+        console.error('Failed to load calendar events:', error.message)
+        return
+      }
+      if (data) {
+        const grouped = {}
+        data.forEach(ev => {
+          if (!grouped[ev.date_key]) grouped[ev.date_key] = []
+          grouped[ev.date_key].push({
+            id: ev.id,
+            name: ev.name,
+            description: ev.description,
+            addedBy: ev.added_by,
+          })
+        })
+        setEvents(grouped)
       }
     }
-    window.addEventListener('storage', handleStorage)
-    return () => window.removeEventListener('storage', handleStorage)
+    load()
+  }, [])
+
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('calendar-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'calendar_events' }, (payload) => {
+        const ev = payload.new
+        setEvents(prev => {
+          const key = ev.date_key
+          const existing = prev[key] || []
+          if (existing.some(e => e.id === ev.id)) return prev
+          return {
+            ...prev,
+            [key]: [...existing, { id: ev.id, name: ev.name, description: ev.description, addedBy: ev.added_by }],
+          }
+        })
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'calendar_events' }, (payload) => {
+        const deletedId = payload.old.id
+        setEvents(prev => {
+          const updated = {}
+          for (const [key, list] of Object.entries(prev)) {
+            const filtered = list.filter(e => e.id !== deletedId)
+            if (filtered.length > 0) updated[key] = filtered
+          }
+          return updated
+        })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   const year = currentDate.getFullYear()
@@ -47,31 +83,52 @@ function CalendarView() {
 
   const dateKey = (day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
-  const handleAddEvent = (e) => {
+  const handleAddEvent = async (e) => {
     e.preventDefault()
     if (!eventName.trim() || !selectedDay) return
     const key = dateKey(selectedDay)
-    const updated = { ...events }
-    if (!updated[key]) updated[key] = []
-    updated[key].push({
+    const newEvent = {
       id: String(Date.now()),
+      date_key: key,
       name: eventName.trim(),
       description: eventDesc.trim(),
-      addedBy: username,
+      added_by: username,
+    }
+
+    const { error } = await supabase.from('calendar_events').insert(newEvent)
+    if (error) {
+      console.error('Failed to save calendar event:', error.message)
+      return
+    }
+
+    setEvents(prev => {
+      const updated = { ...prev }
+      if (!updated[key]) updated[key] = []
+      updated[key].push({
+        id: newEvent.id,
+        name: newEvent.name,
+        description: newEvent.description,
+        addedBy: newEvent.added_by,
+      })
+      return updated
     })
-    setEvents(updated)
-    saveEvents(updated)
     setEventName('')
     setEventDesc('')
   }
 
-  const handleDeleteEvent = (day, eventId) => {
+  const handleDeleteEvent = async (day, eventId) => {
+    const { error } = await supabase.from('calendar_events').delete().eq('id', eventId)
+    if (error) {
+      console.error('Failed to delete calendar event:', error.message)
+      return
+    }
     const key = dateKey(day)
-    const updated = { ...events }
-    updated[key] = (updated[key] || []).filter(ev => ev.id !== eventId)
-    if (updated[key].length === 0) delete updated[key]
-    setEvents(updated)
-    saveEvents(updated)
+    setEvents(prev => {
+      const updated = { ...prev }
+      updated[key] = (updated[key] || []).filter(ev => ev.id !== eventId)
+      if (updated[key].length === 0) delete updated[key]
+      return updated
+    })
   }
 
   const today = new Date()
