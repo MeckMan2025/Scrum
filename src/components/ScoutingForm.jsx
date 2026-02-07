@@ -168,7 +168,7 @@ function ScoutingForm() {
   return (
     <div className="flex-1 flex flex-col min-w-0">
 
-      <main className="flex-1 p-4 pl-10 md:pl-4 overflow-y-auto">
+      <main className="flex-1 p-4 pl-14 md:pl-4 overflow-y-auto">
         <div className="max-w-lg mx-auto space-y-6 pb-8">
 
           {/* Team Info */}
