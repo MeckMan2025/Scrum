@@ -37,7 +37,7 @@ function App() {
   const [tasksByTab, setTasksByTab] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768)
   const [dbReady, setDbReady] = useState(false)
 
   // Load boards and tasks from Supabase on mount

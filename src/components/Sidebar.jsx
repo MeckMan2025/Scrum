@@ -20,13 +20,15 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
 
   return (
     <>
-      {/* Mobile toggle button */}
-      <button
-        onClick={onToggle}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
-      >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
+      {/* Toggle button - visible when sidebar is closed */}
+      {!isOpen && (
+        <button
+          onClick={onToggle}
+          className="fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
+        >
+          <Menu size={20} />
+        </button>
+      )}
 
       {/* Overlay for mobile */}
       {isOpen && (
@@ -39,12 +41,15 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
       {/* Sidebar */}
       <aside
         className={`fixed md:static top-0 left-0 h-full w-64 bg-white/90 backdrop-blur-sm shadow-lg z-40 transform transition-transform duration-300 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-4 border-b">
           <h2 className="text-lg font-semibold text-gray-700 flex items-center justify-between">
             <span className="flex items-center gap-2">
+              <button onClick={onToggle} className="p-1 rounded hover:bg-gray-100 transition-colors">
+                <X size={18} className="text-gray-400" />
+              </button>
               <FolderKanban className="text-pastel-pink-dark" size={20} />
               Navigation
             </span>
