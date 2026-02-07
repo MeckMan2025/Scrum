@@ -11,7 +11,8 @@ function LoadingScreen({ onComplete, onMusicStart }) {
     tappedRef.current = true
 
     // Start music and fade out
-    const audio = new Audio('/Scrum/intro.mp3')
+    const songs = ['/Scrum/intro.mp3', '/Scrum/radical-robotics.mp3']
+    const audio = new Audio(songs[Math.floor(Math.random() * songs.length)])
     audio.volume = 1
     audio.play().catch(() => {})
     onMusicStart(audio)
