@@ -5,10 +5,10 @@ function LoadingScreen({ onComplete, onMusicStart }) {
   const [isVisible, setIsVisible] = useState(true)
   const [isFading, setIsFading] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
-  const [nameInput, setNameInput] = useState('')
+  const { username, login } = useUser()
+  const [nameInput, setNameInput] = useState(username || '')
   const tappedRef = useRef(false)
   const audioRef = useRef(null)
-  const { username, login } = useUser()
 
   const handleTap = (e) => {
     e.preventDefault()
@@ -23,17 +23,8 @@ function LoadingScreen({ onComplete, onMusicStart }) {
     onMusicStart(audio)
     audioRef.current = audio
 
-    // If already logged in, fade out immediately
-    if (username) {
-      setIsFading(true)
-      setTimeout(() => {
-        setIsVisible(false)
-        onComplete()
-      }, 500)
-    } else {
-      // Show login form on the loading screen
-      setShowLogin(true)
-    }
+    // Always show login form
+    setShowLogin(true)
   }
 
   const handleLogin = (e) => {
