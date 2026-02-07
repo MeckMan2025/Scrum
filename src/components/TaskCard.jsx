@@ -14,13 +14,13 @@ function TaskCard({ task, isDragging, onEdit, onDelete, isLead }) {
         {isLead && (
           <div className="flex gap-1 ml-2">
             <button
-              onClick={onEdit}
+              onClick={(e) => { e.stopPropagation(); onEdit() }}
               className="p-1 text-gray-400 hover:text-pastel-blue-dark rounded"
             >
               <Pencil size={14} />
             </button>
             <button
-              onClick={onDelete}
+              onClick={(e) => { e.stopPropagation(); onDelete() }}
               className="p-1 text-gray-400 hover:text-red-400 rounded"
             >
               <Trash2 size={14} />
