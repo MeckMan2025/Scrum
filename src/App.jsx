@@ -413,11 +413,7 @@ function App() {
       ) : activeTab === 'org-chart' ? (
         <OrgChart />
       ) : activeTab === 'suggestions' ? (
-        <div className="flex-1 flex items-center justify-center min-w-0">
-          <p className="text-xl font-semibold text-gray-500 text-center px-4">
-            KAYDEN AND YUKTI ARE WORKING ON IT &lt;3
-          </p>
-        </div>
+        <SuggestionsView />
       ) : activeTab === 'data' || activeTab === 'notebook' ? (
         <div className="flex-1 flex items-center justify-center min-w-0">
           <p className="text-xl font-semibold text-gray-500 text-center px-4">

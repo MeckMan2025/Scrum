@@ -1,47 +1,41 @@
 import { useState, useEffect } from 'react'
 import { Send, Trash2 } from 'lucide-react'
-import { supabase } from '../supabase'
 import { useUser } from '../contexts/UserContext'
+
+const STORAGE_KEY = 'scrum-suggestions'
+
+function loadSuggestions() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []
+  } catch {
+    return []
+  }
+}
+
+function saveSuggestions(suggestions) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(suggestions))
+}
 
 function SuggestionsView() {
   const { username } = useUser()
-  const [suggestions, setSuggestions] = useState([])
+  const [suggestions, setSuggestions] = useState(loadSuggestions)
   const [newSuggestion, setNewSuggestion] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
   const isReviewer = ['kayden', 'yukti'].includes(username.toLowerCase())
 
-  // Load suggestions
+  // Sync across tabs and poll for updates from other devices
   useEffect(() => {
-    async function load() {
-      const { data } = await supabase
-        .from('suggestions')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (data) setSuggestions(data)
+    const handleStorage = (e) => {
+      if (e.key === STORAGE_KEY) {
+        setSuggestions(loadSuggestions())
+      }
     }
-    load()
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
-  // Real-time subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel('suggestions-changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'suggestions' }, (payload) => {
-        setSuggestions(prev => {
-          if (prev.some(s => s.id === payload.new.id)) return prev
-          return [payload.new, ...prev]
-        })
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'suggestions' }, (payload) => {
-        setSuggestions(prev => prev.filter(s => s.id !== payload.old.id))
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [])
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
     if (!newSuggestion.trim()) return
 
@@ -52,14 +46,17 @@ function SuggestionsView() {
       created_at: new Date().toISOString(),
     }
 
+    const updated = [suggestion, ...suggestions]
+    setSuggestions(updated)
+    saveSuggestions(updated)
     setNewSuggestion('')
     setSubmitted(true)
-    await supabase.from('suggestions').insert(suggestion)
   }
 
-  const handleDelete = async (id) => {
-    setSuggestions(prev => prev.filter(s => s.id !== id))
-    await supabase.from('suggestions').delete().eq('id', id)
+  const handleDelete = (id) => {
+    const updated = suggestions.filter(s => s.id !== id)
+    setSuggestions(updated)
+    saveSuggestions(updated)
   }
 
   const formatDate = (timestamp) => {
