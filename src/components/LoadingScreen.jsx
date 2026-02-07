@@ -1,14 +1,38 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useUser } from '../contexts/UserContext'
+import { supabase } from '../supabase'
 
 function LoadingScreen({ onComplete, onMusicStart }) {
   const [isVisible, setIsVisible] = useState(true)
   const [isFading, setIsFading] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
+  const [error, setError] = useState('')
   const { username, login } = useUser()
   const [nameInput, setNameInput] = useState(username || '')
   const tappedRef = useRef(false)
   const audioRef = useRef(null)
+  const channelRef = useRef(null)
+  const [onlineUsers, setOnlineUsers] = useState({})
+
+  // Subscribe to presence channel to check who's online
+  useEffect(() => {
+    const channel = supabase.channel('online-presence-check', {
+      config: { presence: { key: '_login_checker' } },
+    })
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        setOnlineUsers(state)
+      })
+      .subscribe()
+
+    channelRef.current = channel
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   const handleTap = (e) => {
     e.preventDefault()
@@ -29,8 +53,22 @@ function LoadingScreen({ onComplete, onMusicStart }) {
 
   const handleLogin = (e) => {
     e.preventDefault()
-    if (!nameInput.trim()) return
-    login(nameInput.trim())
+    const name = nameInput.trim()
+    if (!name) return
+
+    // Count how many times this name is already online
+    const count = Object.entries(onlineUsers)
+      .filter(([key]) => key !== '_login_checker')
+      .filter(([key]) => key.toLowerCase() === name.toLowerCase())
+      .reduce((sum, [, presences]) => sum + presences.length, 0)
+
+    if (count >= 2) {
+      setError(`"${name}" is already in use by 2 people. Try a different name.`)
+      return
+    }
+
+    setError('')
+    login(name)
     setIsFading(true)
     setTimeout(() => {
       setIsVisible(false)
@@ -68,15 +106,20 @@ function LoadingScreen({ onComplete, onMusicStart }) {
             </h1>
             <p className="text-sm text-gray-500 mt-1">Enter your name to continue</p>
           </div>
-          <input
-            type="text"
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            placeholder="Your name"
-            className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-pastel-blue focus:border-transparent text-center text-lg"
-            autoFocus
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div>
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => { setNameInput(e.target.value); setError('') }}
+              placeholder="Your name"
+              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-pastel-blue focus:border-transparent text-center text-lg"
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            />
+            {error && (
+              <p className="text-sm text-red-500 text-center mt-2">{error}</p>
+            )}
+          </div>
           <button
             type="submit"
             className="w-full py-3 bg-pastel-pink hover:bg-pastel-pink-dark rounded-xl font-semibold text-gray-700 transition-colors text-lg"
