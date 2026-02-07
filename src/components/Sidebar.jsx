@@ -15,8 +15,8 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
   }
 
   const systemTabs = tabs.filter(t => t.type === 'scouting' || t.type === 'boards')
-  const boardTabs = tabs.filter(t => t.type !== 'scouting' && t.type !== 'boards' && t.type !== 'data' && t.type !== 'ai-manual' && t.type !== 'quick-chat' && t.type !== 'tasks')
-  const isBoardActive = activeTab !== 'scouting' && activeTab !== 'boards' && activeTab !== 'data' && activeTab !== 'ai-manual' && activeTab !== 'quick-chat' && activeTab !== 'tasks'
+  const boardTabs = tabs.filter(t => t.type !== 'scouting' && t.type !== 'boards' && t.type !== 'data' && t.type !== 'ai-manual' && t.type !== 'quick-chat' && t.type !== 'tasks' && t.type !== 'notebook')
+  const isBoardActive = activeTab !== 'scouting' && activeTab !== 'boards' && activeTab !== 'data' && activeTab !== 'ai-manual' && activeTab !== 'quick-chat' && activeTab !== 'tasks' && activeTab !== 'notebook'
 
   return (
     <>
@@ -279,6 +279,22 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
           >
             <ClipboardEdit size={16} className="text-pastel-blue-dark" />
             <span className="truncate">Tasks</span>
+          </div>
+
+          {/* Engineering Notebook Tab */}
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+              activeTab === 'notebook'
+                ? 'bg-pastel-pink text-gray-800'
+                : 'hover:bg-pastel-blue/30 text-gray-600'
+            }`}
+            onClick={() => {
+              onTabChange('notebook')
+              onToggle()
+            }}
+          >
+            <BookOpen size={16} className="text-pastel-blue-dark" />
+            <span className="truncate">Engineering Notebook</span>
           </div>
         </nav>
 
