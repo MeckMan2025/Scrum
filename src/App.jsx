@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { Plus, Download, Upload, Play, Pause } from 'lucide-react'
+import { Plus, Download, Upload } from 'lucide-react'
 import { downloadCSV } from './utils/csvUtils'
 import TaskModal from './components/TaskModal'
 import TaskCard from './components/TaskCard'
@@ -38,7 +38,7 @@ function App() {
   const [tasksByTab, setTasksByTab] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [dbReady, setDbReady] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [musicStarted, setMusicStarted] = useState(false)
@@ -351,16 +351,6 @@ function App() {
   return (
     <>
       {isLoading && <LoadingScreen onComplete={handleLoadingComplete} onMusicStart={handleMusicStart} />}
-
-      {/* Music play/pause button */}
-      {musicStarted && !isLoading && (
-        <button
-          onClick={toggleMusic}
-          className="fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-white/90 shadow-lg flex items-center justify-center hover:bg-pastel-pink/50 transition-colors"
-        >
-          {isPlaying ? <Pause size={20} className="text-gray-700" /> : <Play size={20} className="text-gray-700 ml-0.5" />}
-        </button>
-      )}
     <div className="min-h-screen bg-gradient-to-br from-pastel-blue/30 via-pastel-pink/20 to-pastel-orange/30 flex">
       {/* Sidebar */}
       <Sidebar
@@ -371,6 +361,9 @@ function App() {
         onDeleteTab={handleDeleteTab}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
+        isPlaying={isPlaying}
+        onToggleMusic={toggleMusic}
+        musicStarted={musicStarted}
       />
 
       {/* Main Content */}

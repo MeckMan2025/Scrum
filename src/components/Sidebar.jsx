@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Plus, FolderKanban, Trash2, Menu, X, ClipboardList, ChevronRight, LineChart, MoreVertical, BookOpen, MessageCircle, Settings, User, LogOut, Bell, GitBranch, HelpCircle, ClipboardEdit } from 'lucide-react'
+import { Plus, FolderKanban, Trash2, Menu, X, ClipboardList, ChevronRight, LineChart, MoreVertical, BookOpen, MessageCircle, Settings, User, LogOut, Bell, GitBranch, HelpCircle, ClipboardEdit, Play, Pause } from 'lucide-react'
 
-function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, onToggle }) {
+function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, onToggle, isPlaying, onToggleMusic, musicStarted }) {
   const [newTabName, setNewTabName] = useState('')
   const [isAdding, setIsAdding] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -30,17 +30,17 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
         </button>
       )}
 
-      {/* Overlay for mobile */}
+      {/* Overlay */}
       {isOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/30 z-30"
+          className="fixed inset-0 bg-black/30 z-30"
           onClick={onToggle}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:static top-0 left-0 h-full w-64 bg-white/90 backdrop-blur-sm shadow-lg z-40 transform transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-64 bg-white/90 backdrop-blur-sm shadow-lg z-40 transform transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -103,7 +103,7 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
             }`}
             onClick={() => {
               onTabChange('scouting')
-              if (window.innerWidth < 768) onToggle()
+              onToggle()
             }}
           >
             <ClipboardList size={16} className="text-pastel-orange-dark" />
@@ -121,7 +121,7 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
             }`}
             onClick={() => {
               onTabChange('business')
-              if (window.innerWidth < 768) onToggle()
+              onToggle()
             }}
           >
             <FolderKanban size={16} className="text-pastel-blue-dark" />
@@ -141,7 +141,7 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
                   }`}
                   onClick={() => {
                     onTabChange(tab.id)
-                    if (window.innerWidth < 768) onToggle()
+                    onToggle()
                   }}
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -220,7 +220,7 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
             }`}
             onClick={() => {
               onTabChange('data')
-              if (window.innerWidth < 768) onToggle()
+              onToggle()
             }}
           >
             <LineChart size={16} className="text-pastel-blue-dark" />
@@ -238,7 +238,7 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
             }`}
             onClick={() => {
               onTabChange('ai-manual')
-              if (window.innerWidth < 768) onToggle()
+              onToggle()
             }}
           >
             <BookOpen size={16} className="text-pastel-orange-dark" />
@@ -256,7 +256,7 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
             }`}
             onClick={() => {
               onTabChange('quick-chat')
-              if (window.innerWidth < 768) onToggle()
+              onToggle()
             }}
           >
             <MessageCircle size={16} className="text-pastel-pink-dark" />
@@ -274,13 +274,26 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
             }`}
             onClick={() => {
               onTabChange('tasks')
-              if (window.innerWidth < 768) onToggle()
+              onToggle()
             }}
           >
             <ClipboardEdit size={16} className="text-pastel-blue-dark" />
             <span className="truncate">Tasks</span>
           </div>
         </nav>
+
+        {/* Music control */}
+        {musicStarted && (
+          <div className="p-4 border-t">
+            <button
+              onClick={onToggleMusic}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-pastel-blue/30 hover:bg-pastel-blue/50 rounded-lg transition-colors text-gray-600 text-sm"
+            >
+              {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+              {isPlaying ? 'Pause Music' : 'Play Music'}
+            </button>
+          </div>
+        )}
       </aside>
     </>
   )
