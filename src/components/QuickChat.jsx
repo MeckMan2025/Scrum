@@ -5,10 +5,7 @@ import { supabase } from '../supabase'
 const SENDER_COLORS = [
   { bg: '#FFCAD4', name: '#F4A3B5' }, // pastel pink
   { bg: '#FFD6A5', name: '#FFBB70' }, // pastel orange
-  { bg: '#C3F0CA', name: '#7DC88A' }, // pastel green
-  { bg: '#D5C6F0', name: '#A98ED6' }, // pastel purple
-  { bg: '#FFE0B2', name: '#E6A756' }, // pastel peach
-  { bg: '#B8E4F0', name: '#6ABDD4' }, // pastel teal
+  { bg: '#FFFFFF', name: '#999999' }, // white
 ]
 
 function getSenderColor(sender) {
