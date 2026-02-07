@@ -2,6 +2,23 @@ import { useState, useEffect, useRef } from 'react'
 import { Send, Trash2, User } from 'lucide-react'
 import { supabase } from '../supabase'
 
+const SENDER_COLORS = [
+  { bg: '#FFCAD4', name: '#F4A3B5' }, // pastel pink
+  { bg: '#FFD6A5', name: '#FFBB70' }, // pastel orange
+  { bg: '#C3F0CA', name: '#7DC88A' }, // pastel green
+  { bg: '#D5C6F0', name: '#A98ED6' }, // pastel purple
+  { bg: '#FFE0B2', name: '#E6A756' }, // pastel peach
+  { bg: '#B8E4F0', name: '#6ABDD4' }, // pastel teal
+]
+
+function getSenderColor(sender) {
+  let hash = 0
+  for (let i = 0; i < sender.length; i++) {
+    hash = sender.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return SENDER_COLORS[Math.abs(hash) % SENDER_COLORS.length]
+}
+
 function QuickChat() {
   const [username, setUsername] = useState(() => localStorage.getItem('chat-username') || '')
   const [isSettingName, setIsSettingName] = useState(() => !localStorage.getItem('chat-username'))
@@ -167,17 +184,19 @@ function QuickChat() {
               </div>
               {msgs.map((msg) => {
                 const isOwn = msg.sender === username
+                const senderColor = !isOwn ? getSenderColor(msg.sender) : null
                 return (
                   <div
                     key={msg.id}
                     className={`flex mb-3 ${isOwn ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`relative group max-w-[75%] rounded-2xl px-4 py-2 shadow-sm ${
+                      className={`relative group max-w-[75%] rounded-2xl px-4 py-2 shadow-sm text-gray-800 ${
                         isOwn
-                          ? 'bg-pastel-blue text-gray-800 rounded-br-md'
-                          : 'bg-white text-gray-800 rounded-bl-md'
+                          ? 'bg-pastel-blue rounded-br-md'
+                          : 'rounded-bl-md'
                       }`}
+                      style={senderColor ? { backgroundColor: senderColor.bg } : undefined}
                     >
                       {isOwn && (
                         <button
@@ -188,7 +207,12 @@ function QuickChat() {
                           <Trash2 size={12} className="text-gray-400 hover:text-red-400" />
                         </button>
                       )}
-                      <p className={`text-xs font-semibold mb-0.5 ${isOwn ? 'text-pastel-blue-dark' : 'text-pastel-pink-dark'}`}>{msg.sender}</p>
+                      <p
+                        className={`text-xs font-semibold mb-0.5 ${isOwn ? 'text-pastel-blue-dark' : ''}`}
+                        style={senderColor ? { color: senderColor.name } : undefined}
+                      >
+                        {msg.sender}
+                      </p>
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                       <p className={`text-[10px] mt-1 ${isOwn ? 'text-gray-500 text-right' : 'text-gray-400 text-right'}`}>
                         {formatTime(msg.created_at)}
