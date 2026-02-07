@@ -5,8 +5,16 @@ function LoadingScreen({ onComplete }) {
   const [isFading, setIsFading] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const audioRef = useRef(null)
+  const tappedRef = useRef(false)
 
-  const handleTap = () => {
+  const handleTap = (e) => {
+    e.preventDefault()
+
+    // Prevent double-firing from touch + click
+    if (tappedRef.current) return
+    tappedRef.current = true
+    setTimeout(() => { tappedRef.current = false }, 300)
+
     // First tap: start the audio
     if (!hasStarted) {
       setHasStarted(true)
@@ -21,7 +29,6 @@ function LoadingScreen({ onComplete }) {
     if (isFading) return
     setIsFading(true)
 
-    // Fade audio out over 500ms
     const audio = audioRef.current
     if (audio) {
       const fadeInterval = setInterval(() => {
@@ -45,7 +52,7 @@ function LoadingScreen({ onComplete }) {
   return (
     <div
       onClick={handleTap}
-      onTouchStart={handleTap}
+      onTouchEnd={handleTap}
       className={`fixed inset-0 z-50 cursor-pointer transition-opacity duration-500 flex items-end justify-center pb-16 ${
         isFading ? 'opacity-0' : 'opacity-100'
       }`}
@@ -57,10 +64,10 @@ function LoadingScreen({ onComplete }) {
       }}
     >
       {!hasStarted && (
-        <p className="text-white/80 text-sm animate-pulse">Tap to start</p>
+        <p className="text-sm font-semibold animate-pulse bg-pastel-pink/80 text-gray-700 px-4 py-2 rounded-full shadow-md">Tap to start</p>
       )}
       {hasStarted && !isFading && (
-        <p className="text-white/80 text-sm animate-pulse">Tap to continue</p>
+        <p className="text-sm font-semibold animate-pulse bg-pastel-blue/80 text-gray-700 px-4 py-2 rounded-full shadow-md">Tap to continue</p>
       )}
     </div>
   )
