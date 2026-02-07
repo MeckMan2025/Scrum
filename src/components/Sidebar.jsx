@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, FolderKanban, Trash2, Menu, X, ClipboardList, ChevronRight, LineChart, MoreVertical, BookOpen, MessageCircle, Settings, User, LogOut, Bell, GitBranch, HelpCircle, ClipboardEdit, Play, Pause } from 'lucide-react'
+import { Plus, FolderKanban, Trash2, Menu, X, ClipboardList, ChevronRight, LineChart, MoreVertical, BookOpen, MessageCircle, Settings, User, LogOut, Bell, GitBranch, HelpCircle, ClipboardEdit, Play, Pause, Calendar } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 
 function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, onToggle, isPlaying, onToggleMusic, musicStarted, onlineUsers, isLead }) {
@@ -17,8 +17,8 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
   }
 
   const systemTabs = tabs.filter(t => t.type === 'scouting' || t.type === 'boards')
-  const boardTabs = tabs.filter(t => t.type !== 'scouting' && t.type !== 'boards' && t.type !== 'data' && t.type !== 'ai-manual' && t.type !== 'quick-chat' && t.type !== 'tasks' && t.type !== 'notebook' && t.type !== 'org-chart' && t.type !== 'suggestions')
-  const isBoardActive = activeTab !== 'scouting' && activeTab !== 'boards' && activeTab !== 'data' && activeTab !== 'ai-manual' && activeTab !== 'quick-chat' && activeTab !== 'tasks' && activeTab !== 'notebook' && activeTab !== 'org-chart' && activeTab !== 'suggestions'
+  const boardTabs = tabs.filter(t => t.type !== 'scouting' && t.type !== 'boards' && t.type !== 'data' && t.type !== 'ai-manual' && t.type !== 'quick-chat' && t.type !== 'tasks' && t.type !== 'notebook' && t.type !== 'org-chart' && t.type !== 'suggestions' && t.type !== 'calendar' && t.type !== 'attendance')
+  const isBoardActive = activeTab !== 'scouting' && activeTab !== 'boards' && activeTab !== 'data' && activeTab !== 'ai-manual' && activeTab !== 'quick-chat' && activeTab !== 'tasks' && activeTab !== 'notebook' && activeTab !== 'org-chart' && activeTab !== 'suggestions' && activeTab !== 'calendar' && activeTab !== 'attendance'
 
   return (
     <>
@@ -228,7 +228,7 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
           {/* Data Tab */}
           <div
             className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-              activeTab === 'data'
+              activeTab === 'data' || activeTab === 'attendance'
                 ? 'bg-pastel-pink text-gray-800'
                 : 'hover:bg-pastel-blue/30 text-gray-600'
             }`}
@@ -242,17 +242,31 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
           </div>
 
           {/* Data sub-items */}
-          {activeTab === 'data' && (
+          {(activeTab === 'data' || activeTab === 'attendance') && (
             <div className="ml-4 mt-1 space-y-1">
               <div
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors bg-pastel-blue/40 text-gray-800 text-sm"
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors text-sm ${
+                  activeTab === 'data' ? 'bg-pastel-blue/40 text-gray-800' : 'hover:bg-pastel-blue/20 text-gray-500'
+                }`}
                 onClick={() => {
                   onTabChange('data')
                   onToggle()
                 }}
               >
-                <ChevronRight size={14} className="rotate-90" />
+                <ChevronRight size={14} className={activeTab === 'data' ? 'rotate-90' : ''} />
                 <span className="truncate">Scouting</span>
+              </div>
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors text-sm ${
+                  activeTab === 'attendance' ? 'bg-pastel-blue/40 text-gray-800' : 'hover:bg-pastel-blue/20 text-gray-500'
+                }`}
+                onClick={() => {
+                  onTabChange('attendance')
+                  onToggle()
+                }}
+              >
+                <ChevronRight size={14} className={activeTab === 'attendance' ? 'rotate-90' : ''} />
+                <span className="truncate">Attendance</span>
               </div>
             </div>
           )}
@@ -345,6 +359,24 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
           >
             <HelpCircle size={16} className="text-pastel-orange-dark" />
             <span className="truncate">Suggestions</span>
+          </div>
+
+          <hr className="my-2 border-gray-200" />
+
+          {/* Calendar Tab */}
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+              activeTab === 'calendar'
+                ? 'bg-pastel-pink text-gray-800'
+                : 'hover:bg-pastel-blue/30 text-gray-600'
+            }`}
+            onClick={() => {
+              onTabChange('calendar')
+              onToggle()
+            }}
+          >
+            <Calendar size={16} className="text-pastel-pink-dark" />
+            <span className="truncate">Calendar</span>
           </div>
         </nav>
 
