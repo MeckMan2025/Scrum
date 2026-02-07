@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { Plus, Download, Upload } from 'lucide-react'
-import { loadTasksFromCSV, downloadCSV } from './utils/csvUtils'
+import { downloadCSV } from './utils/csvUtils'
 import TaskModal from './components/TaskModal'
 import TaskCard from './components/TaskCard'
 import Sidebar from './components/Sidebar'
 import LoadingScreen from './components/LoadingScreen'
 import ScoutingForm from './components/ScoutingForm'
 import TasksView from './components/TasksView'
+import { supabase } from './supabase'
 
 const COLUMNS = [
   { id: 'todo', title: 'To Do', color: 'bg-pastel-blue' },
@@ -18,89 +19,157 @@ const COLUMNS = [
 ]
 
 const SCOUTING_TAB = { id: 'scouting', name: 'Scouting', type: 'scouting' }
-
 const BOARDS_TAB = { id: 'boards', name: 'Boards', type: 'boards' }
-
 const DATA_TAB = { id: 'data', name: 'Data', type: 'data' }
-
 const AI_TAB = { id: 'ai-manual', name: 'AI Manual', type: 'ai-manual' }
-
 const CHAT_TAB = { id: 'quick-chat', name: 'Quick Chat', type: 'quick-chat' }
-
 const TASKS_TAB = { id: 'tasks', name: 'Tasks', type: 'tasks' }
 
-const PERMANENT_BOARDS = [
-  { id: 'business', name: 'Business', permanent: true },
-  { id: 'technical', name: 'Technical', permanent: true },
-  { id: 'programming', name: 'Programming', permanent: true },
-]
+const SYSTEM_TABS = [SCOUTING_TAB, BOARDS_TAB, DATA_TAB, AI_TAB, CHAT_TAB, TASKS_TAB]
 
 function App() {
   const [isLoading, setIsLoading] = useState(true)
-  const [tabs, setTabs] = useState(() => {
-    const saved = localStorage.getItem('scrum-tabs')
-    const userTabs = saved ? JSON.parse(saved) : []
-    const withoutSystem = userTabs.filter(t => t.id !== 'scouting' && t.id !== 'boards' && t.id !== 'data' && t.id !== 'ai-manual' && t.id !== 'quick-chat' && t.id !== 'tasks' && !PERMANENT_BOARDS.some(pb => pb.id === t.id))
-    return [SCOUTING_TAB, BOARDS_TAB, DATA_TAB, AI_TAB, CHAT_TAB, TASKS_TAB, ...PERMANENT_BOARDS, ...withoutSystem]
-  })
+  const [tabs, setTabs] = useState([...SYSTEM_TABS])
   const [activeTab, setActiveTab] = useState(() => {
     const saved = localStorage.getItem('scrum-active-tab')
     return saved || 'business'
   })
-  const [tasksByTab, setTasksByTab] = useState(() => {
-    const saved = localStorage.getItem('scrum-tasks')
-    return saved ? JSON.parse(saved) : { business: [], technical: [], programming: [] }
-  })
+  const [tasksByTab, setTasksByTab] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [dbReady, setDbReady] = useState(false)
 
-  // Load initial tasks from CSV if no saved data
+  // Load boards and tasks from Supabase on mount
   useEffect(() => {
-    const saved = localStorage.getItem('scrum-tasks')
-    if (!saved) {
-      loadTasksFromCSV().then(tasks => {
-        setTasksByTab({ business: tasks, technical: [], programming: [] })
-      })
+    async function loadData() {
+      // Load boards
+      const { data: boards } = await supabase
+        .from('boards')
+        .select('*')
+        .order('created_at')
+
+      if (boards) {
+        const boardTabs = boards.map(b => ({
+          id: b.id,
+          name: b.name,
+          permanent: b.permanent,
+        }))
+        setTabs([...SYSTEM_TABS, ...boardTabs])
+      }
+
+      // Load tasks
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('*')
+
+      if (tasks) {
+        const grouped = {}
+        if (boards) {
+          boards.forEach(b => { grouped[b.id] = [] })
+        }
+        tasks.forEach(t => {
+          if (!grouped[t.board_id]) grouped[t.board_id] = []
+          grouped[t.board_id].push({
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            assignee: t.assignee,
+            dueDate: t.due_date,
+            status: t.status,
+            skills: t.skills || [],
+            createdAt: t.created_at,
+          })
+        })
+        setTasksByTab(grouped)
+      }
+
+      setDbReady(true)
     }
+
+    loadData()
   }, [])
 
-  // Save to localStorage
+  // Real-time: listen for board changes
   useEffect(() => {
-    localStorage.setItem('scrum-tabs', JSON.stringify(tabs))
-  }, [tabs])
+    const channel = supabase
+      .channel('boards-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, async () => {
+        const { data: boards } = await supabase.from('boards').select('*').order('created_at')
+        if (boards) {
+          const boardTabs = boards.map(b => ({
+            id: b.id,
+            name: b.name,
+            permanent: b.permanent,
+          }))
+          setTabs([...SYSTEM_TABS, ...boardTabs])
+        }
+      })
+      .subscribe()
 
+    return () => { supabase.removeChannel(channel) }
+  }, [])
+
+  // Real-time: listen for task changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('tasks-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, async () => {
+        const { data: tasks } = await supabase.from('tasks').select('*')
+        const { data: boards } = await supabase.from('boards').select('id')
+        if (tasks && boards) {
+          const grouped = {}
+          boards.forEach(b => { grouped[b.id] = [] })
+          tasks.forEach(t => {
+            if (!grouped[t.board_id]) grouped[t.board_id] = []
+            grouped[t.board_id].push({
+              id: t.id,
+              title: t.title,
+              description: t.description,
+              assignee: t.assignee,
+              dueDate: t.due_date,
+              status: t.status,
+              skills: t.skills || [],
+              createdAt: t.created_at,
+            })
+          })
+          setTasksByTab(grouped)
+        }
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [])
+
+  // Save activeTab locally (each user picks their own view)
   useEffect(() => {
     localStorage.setItem('scrum-active-tab', activeTab)
   }, [activeTab])
 
-  useEffect(() => {
-    localStorage.setItem('scrum-tasks', JSON.stringify(tasksByTab))
-  }, [tasksByTab])
-
   const tasks = tasksByTab[activeTab] || []
 
-  const setTasks = (updater) => {
-    setTasksByTab(prev => ({
-      ...prev,
-      [activeTab]: typeof updater === 'function' ? updater(prev[activeTab] || []) : updater,
-    }))
-  }
-
-  const handleAddTab = (name) => {
-    const newTab = {
-      id: String(Date.now()),
+  const handleAddTab = async (name) => {
+    const newId = String(Date.now())
+    const { error } = await supabase.from('boards').insert({
+      id: newId,
       name,
+      permanent: false,
+    })
+    if (!error) {
+      setTabs(prev => [...prev, { id: newId, name, permanent: false }])
+      setTasksByTab(prev => ({ ...prev, [newId]: [] }))
+      setActiveTab(newId)
     }
-    setTabs(prev => [...prev, newTab])
-    setTasksByTab(prev => ({ ...prev, [newTab.id]: [] }))
-    setActiveTab(newTab.id)
   }
 
-  const handleDeleteTab = (tabId) => {
+  const handleDeleteTab = async (tabId) => {
     if (tabId === 'scouting' || tabId === 'boards' || tabId === 'data' || tabId === 'ai-manual' || tabId === 'quick-chat' || tabId === 'tasks') return
-    if (PERMANENT_BOARDS.some(pb => pb.id === tabId)) return
-    if (tabs.length <= 1) return
+    const board = tabs.find(t => t.id === tabId)
+    if (board?.permanent) return
+
+    await supabase.from('tasks').delete().eq('board_id', tabId)
+    await supabase.from('boards').delete().eq('id', tabId)
+
     setTabs(prev => prev.filter(t => t.id !== tabId))
     setTasksByTab(prev => {
       const updated = { ...prev }
@@ -108,49 +177,92 @@ function App() {
       return updated
     })
     if (activeTab === tabId) {
-      setActiveTab(tabs.find(t => t.id !== tabId)?.id || 'business')
+      setActiveTab('business')
     }
   }
 
-  const handleDragEnd = (result) => {
+  const handleDragEnd = async (result) => {
     if (!result.destination) return
-
     const { source, destination, draggableId } = result
-
     if (source.droppableId === destination.droppableId) return
 
-    setTasks(prev =>
-      prev.map(task =>
+    // Update locally
+    setTasksByTab(prev => ({
+      ...prev,
+      [activeTab]: (prev[activeTab] || []).map(task =>
         task.id === draggableId
           ? { ...task, status: destination.droppableId }
           : task
-      )
-    )
+      ),
+    }))
+
+    // Update in Supabase
+    await supabase.from('tasks').update({ status: destination.droppableId }).eq('id', draggableId)
   }
 
   const getTasksByStatus = (status) => {
     return tasks.filter(task => task.status === status)
   }
 
-  const handleAddTask = (newTask) => {
+  const handleAddTask = async (newTask) => {
     const task = {
-      ...newTask,
       id: String(Date.now()),
-      createdAt: new Date().toISOString().split('T')[0],
+      board_id: activeTab,
+      title: newTask.title,
+      description: newTask.description || '',
+      assignee: newTask.assignee || '',
+      due_date: newTask.dueDate || '',
+      status: newTask.status || 'todo',
+      skills: newTask.skills || [],
+      created_at: new Date().toISOString().split('T')[0],
     }
-    setTasks(prev => [...prev, task])
+
+    const { error } = await supabase.from('tasks').insert(task)
+    if (!error) {
+      const localTask = {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        assignee: task.assignee,
+        dueDate: task.due_date,
+        status: task.status,
+        skills: task.skills,
+        createdAt: task.created_at,
+      }
+      setTasksByTab(prev => ({
+        ...prev,
+        [activeTab]: [...(prev[activeTab] || []), localTask],
+      }))
+    }
     setIsModalOpen(false)
   }
 
-  const handleEditTask = (updatedTask) => {
-    setTasks(prev =>
-      prev.map(task => (task.id === updatedTask.id ? updatedTask : task))
-    )
+  const handleEditTask = async (updatedTask) => {
+    await supabase.from('tasks').update({
+      title: updatedTask.title,
+      description: updatedTask.description || '',
+      assignee: updatedTask.assignee || '',
+      due_date: updatedTask.dueDate || '',
+      status: updatedTask.status || 'todo',
+      skills: updatedTask.skills || [],
+    }).eq('id', updatedTask.id)
+
+    setTasksByTab(prev => ({
+      ...prev,
+      [activeTab]: (prev[activeTab] || []).map(task =>
+        task.id === updatedTask.id ? updatedTask : task
+      ),
+    }))
     setEditingTask(null)
   }
 
-  const handleDeleteTask = (taskId) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId))
+  const handleDeleteTask = async (taskId) => {
+    await supabase.from('tasks').delete().eq('id', taskId)
+
+    setTasksByTab(prev => ({
+      ...prev,
+      [activeTab]: (prev[activeTab] || []).filter(task => task.id !== taskId),
+    }))
   }
 
   const handleExport = () => {
@@ -163,19 +275,45 @@ function App() {
     if (!file) return
 
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = e.target.result
-      import('papaparse').then(Papa => {
-        const result = Papa.default.parse(text, {
-          header: true,
-          skipEmptyLines: true,
-        })
-        const importedTasks = result.data.map(task => ({
-          ...task,
-          skills: task.skills ? task.skills.split(';') : [],
-        }))
-        setTasks(importedTasks)
+      const Papa = await import('papaparse')
+      const result = Papa.default.parse(text, {
+        header: true,
+        skipEmptyLines: true,
       })
+      const importedTasks = result.data.map(task => ({
+        id: String(Date.now()) + Math.random().toString(36).slice(2),
+        board_id: activeTab,
+        title: task.title || '',
+        description: task.description || '',
+        assignee: task.assignee || '',
+        due_date: task.dueDate || '',
+        status: task.status || 'todo',
+        skills: task.skills ? task.skills.split(';') : [],
+        created_at: task.createdAt || new Date().toISOString().split('T')[0],
+      }))
+
+      if (importedTasks.length > 0) {
+        await supabase.from('tasks').insert(importedTasks)
+        // Reload tasks
+        const { data } = await supabase.from('tasks').select('*').eq('board_id', activeTab)
+        if (data) {
+          setTasksByTab(prev => ({
+            ...prev,
+            [activeTab]: data.map(t => ({
+              id: t.id,
+              title: t.title,
+              description: t.description,
+              assignee: t.assignee,
+              dueDate: t.due_date,
+              status: t.status,
+              skills: t.skills || [],
+              createdAt: t.created_at,
+            })),
+          }))
+        }
+      }
     }
     reader.readAsText(file)
     event.target.value = ''

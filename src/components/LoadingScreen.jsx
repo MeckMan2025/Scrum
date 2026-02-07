@@ -4,29 +4,22 @@ function LoadingScreen({ onComplete }) {
   const [isVisible, setIsVisible] = useState(true)
   const [isFading, setIsFading] = useState(false)
 
-  useEffect(() => {
-    // Start fade out after 2.5 seconds (leaving 0.5s for fade animation)
-    const fadeTimer = setTimeout(() => {
-      setIsFading(true)
-    }, 2500)
-
-    // Complete after 3 seconds
-    const completeTimer = setTimeout(() => {
+  const handleTap = () => {
+    if (isFading) return
+    setIsFading(true)
+    setTimeout(() => {
       setIsVisible(false)
       onComplete()
-    }, 3000)
-
-    return () => {
-      clearTimeout(fadeTimer)
-      clearTimeout(completeTimer)
-    }
-  }, [onComplete])
+    }, 500)
+  }
 
   if (!isVisible) return null
 
   return (
     <div
-      className={`fixed inset-0 z-50 transition-opacity duration-500 ${
+      onClick={handleTap}
+      onTouchStart={handleTap}
+      className={`fixed inset-0 z-50 cursor-pointer transition-opacity duration-500 ${
         isFading ? 'opacity-0' : 'opacity-100'
       }`}
       style={{

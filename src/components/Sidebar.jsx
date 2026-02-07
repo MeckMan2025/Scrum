@@ -57,7 +57,7 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
         {/* Menu Modal */}
         {menuOpen && (
           <>
-            <div className="fixed inset-0 bg-black/30 z-50" onClick={() => setMenuOpen(false)} />
+            <div className="fixed inset-0 bg-black/30 z-50" />
             <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
               <div className="bg-white rounded-xl shadow-xl p-6 w-64 pointer-events-auto relative">
                 <button onClick={() => setMenuOpen(false)} className="absolute top-3 right-3 p-1 rounded hover:bg-gray-100 transition-colors">
