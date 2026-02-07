@@ -15,8 +15,8 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
   }
 
   const systemTabs = tabs.filter(t => t.type === 'scouting' || t.type === 'boards')
-  const boardTabs = tabs.filter(t => t.type !== 'scouting' && t.type !== 'boards' && t.type !== 'data' && t.type !== 'ai-manual' && t.type !== 'quick-chat' && t.type !== 'tasks' && t.type !== 'notebook')
-  const isBoardActive = activeTab !== 'scouting' && activeTab !== 'boards' && activeTab !== 'data' && activeTab !== 'ai-manual' && activeTab !== 'quick-chat' && activeTab !== 'tasks' && activeTab !== 'notebook'
+  const boardTabs = tabs.filter(t => t.type !== 'scouting' && t.type !== 'boards' && t.type !== 'data' && t.type !== 'ai-manual' && t.type !== 'quick-chat' && t.type !== 'tasks' && t.type !== 'notebook' && t.type !== 'org-chart')
+  const isBoardActive = activeTab !== 'scouting' && activeTab !== 'boards' && activeTab !== 'data' && activeTab !== 'ai-manual' && activeTab !== 'quick-chat' && activeTab !== 'tasks' && activeTab !== 'notebook' && activeTab !== 'org-chart'
 
   return (
     <>
@@ -74,13 +74,19 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
                     { icon: User, label: 'Profile', color: 'text-pastel-blue-dark' },
                     { icon: Settings, label: 'Settings', color: 'text-pastel-orange-dark' },
                     { icon: Bell, label: 'Notifications', color: 'text-pastel-pink-dark' },
-                    { icon: GitBranch, label: 'Org Chart', color: 'text-pastel-blue-dark' },
+                    { icon: GitBranch, label: 'Org Chart', color: 'text-pastel-blue-dark', tab: 'org-chart' },
                     { icon: HelpCircle, label: 'Help', color: 'text-pastel-orange-dark' },
                     { icon: LogOut, label: 'Logout', color: 'text-red-400' },
-                  ].map(({ icon: Icon, label, color }) => (
+                  ].map(({ icon: Icon, label, color, tab }) => (
                     <button
                       key={label}
-                      onClick={() => setMenuOpen(false)}
+                      onClick={() => {
+                        setMenuOpen(false)
+                        if (tab) {
+                          onTabChange(tab)
+                          onToggle()
+                        }
+                      }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-pastel-blue/20 transition-colors text-gray-700 text-sm"
                     >
                       <Icon size={18} className={color} />
@@ -226,6 +232,22 @@ function Sidebar({ tabs, activeTab, onTabChange, onAddTab, onDeleteTab, isOpen, 
             <LineChart size={16} className="text-pastel-blue-dark" />
             <span className="truncate">Data</span>
           </div>
+
+          {/* Data sub-items */}
+          {activeTab === 'data' && (
+            <div className="ml-4 mt-1 space-y-1">
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors bg-pastel-blue/40 text-gray-800 text-sm"
+                onClick={() => {
+                  onTabChange('data')
+                  onToggle()
+                }}
+              >
+                <ChevronRight size={14} className="rotate-90" />
+                <span className="truncate">Scouting</span>
+              </div>
+            </div>
+          )}
 
           <hr className="my-2 border-gray-200" />
 

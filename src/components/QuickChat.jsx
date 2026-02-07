@@ -28,6 +28,23 @@ function QuickChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Mark messages from other users as seen
+  const markMessagesAsSeen = async (msgs) => {
+    if (!username) return
+    const unseen = msgs.filter(
+      (m) => m.sender !== username && !m.seen_by?.includes(username)
+    )
+    if (unseen.length === 0) return
+    await Promise.all(
+      unseen.map((m) =>
+        supabase
+          .from('messages')
+          .update({ seen_by: [...(m.seen_by || []), username] })
+          .eq('id', m.id)
+      )
+    )
+  }
+
   // Load messages on mount
   useEffect(() => {
     async function loadMessages() {
@@ -35,10 +52,13 @@ function QuickChat() {
         .from('messages')
         .select('*')
         .order('created_at', { ascending: true })
-      if (data) setMessages(data)
+      if (data) {
+        setMessages(data)
+        markMessagesAsSeen(data)
+      }
     }
     loadMessages()
-  }, [])
+  }, [username])
 
   // Real-time subscription
   useEffect(() => {
@@ -49,6 +69,10 @@ function QuickChat() {
           if (prev.some(m => m.id === payload.new.id)) return prev
           return [...prev, payload.new]
         })
+        markMessagesAsSeen([payload.new])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
+        setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
         setMessages(prev => prev.filter(m => m.id !== payload.old.id))
@@ -145,19 +169,23 @@ function QuickChat() {
     <div className="flex-1 flex flex-col min-w-0">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="py-4 pr-4 flex items-center justify-between" style={{ paddingLeft: '4.5rem' }}>
-          <div>
+        <div className="py-4 px-4 flex items-center">
+          {/* Spacer to match hamburger width */}
+          <div className="w-10 shrink-0" />
+          {/* Centered title */}
+          <div className="flex-1 text-center">
             <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-pastel-blue-dark via-pastel-pink-dark to-pastel-orange-dark bg-clip-text text-transparent">
               Quick Chat
             </h1>
             <p className="text-sm text-gray-500">Logged in as {username}</p>
           </div>
+          {/* Change name button */}
           <button
             onClick={() => {
               setIsSettingName(true)
               setNameInput(username)
             }}
-            className="p-2 hover:bg-pastel-blue/30 rounded-lg transition-colors"
+            className="p-2 hover:bg-pastel-blue/30 rounded-lg transition-colors shrink-0"
             title="Change name"
           >
             <User size={18} className="text-gray-500" />
@@ -214,6 +242,9 @@ function QuickChat() {
                       <p className={`text-[10px] mt-1 ${isOwn ? 'text-gray-500 text-right' : 'text-gray-400 text-right'}`}>
                         {formatTime(msg.created_at)}
                       </p>
+                      {isOwn && msg.seen_by?.length > 0 && (
+                        <p className="text-[10px] text-gray-400 text-right">Seen</p>
+                      )}
                     </div>
                   </div>
                 )

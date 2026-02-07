@@ -9,6 +9,7 @@ import LoadingScreen from './components/LoadingScreen'
 import ScoutingForm from './components/ScoutingForm'
 import TasksView from './components/TasksView'
 import QuickChat from './components/QuickChat'
+import OrgChart from './components/OrgChart'
 import { supabase } from './supabase'
 
 const COLUMNS = [
@@ -26,8 +27,9 @@ const AI_TAB = { id: 'ai-manual', name: 'AI Manual', type: 'ai-manual' }
 const CHAT_TAB = { id: 'quick-chat', name: 'Quick Chat', type: 'quick-chat' }
 const TASKS_TAB = { id: 'tasks', name: 'Tasks', type: 'tasks' }
 const NOTEBOOK_TAB = { id: 'notebook', name: 'Engineering Notebook', type: 'notebook' }
+const ORG_TAB = { id: 'org-chart', name: 'Org Chart', type: 'org-chart' }
 
-const SYSTEM_TABS = [SCOUTING_TAB, BOARDS_TAB, DATA_TAB, AI_TAB, CHAT_TAB, TASKS_TAB, NOTEBOOK_TAB]
+const SYSTEM_TABS = [SCOUTING_TAB, BOARDS_TAB, DATA_TAB, AI_TAB, CHAT_TAB, TASKS_TAB, NOTEBOOK_TAB, ORG_TAB]
 
 function App() {
   const [isLoading, setIsLoading] = useState(true)
@@ -168,7 +170,7 @@ function App() {
   }
 
   const handleDeleteTab = async (tabId) => {
-    if (tabId === 'scouting' || tabId === 'boards' || tabId === 'data' || tabId === 'ai-manual' || tabId === 'quick-chat' || tabId === 'tasks' || tabId === 'notebook') return
+    if (tabId === 'scouting' || tabId === 'boards' || tabId === 'data' || tabId === 'ai-manual' || tabId === 'quick-chat' || tabId === 'tasks' || tabId === 'notebook' || tabId === 'org-chart') return
     const board = tabs.find(t => t.id === tabId)
     if (board?.permanent) return
 
@@ -394,6 +396,8 @@ function App() {
             Powered by FIRST. Trained on the current Competition Manual — always verify answers against the official manual.
           </p>
         </div>
+      ) : activeTab === 'org-chart' ? (
+        <OrgChart />
       ) : activeTab === 'data' || activeTab === 'notebook' ? (
         <div className="flex-1 flex items-center justify-center min-w-0">
           <p className="text-xl font-semibold text-gray-500 text-center px-4">
